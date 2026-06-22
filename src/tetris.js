@@ -163,6 +163,7 @@
       this.overlaySub = document.getElementById('overlaySub')
       this.difficultySelect = document.getElementById('difficultySelect')
       this.muteBtn = document.getElementById('muteBtn')
+      this.pauseBtn = document.getElementById('pauseBtn')
 
       this.canvas.width = COLS * CELL_SIZE
       this.canvas.height = ROWS * CELL_SIZE
@@ -261,6 +262,11 @@
         }
       })
 
+      this.pauseBtn.addEventListener('click', () => {
+        if (!this.started || this.gameOver) return
+        this.togglePause()
+      })
+
       document.querySelectorAll('.ctrl-btn[data-action]').forEach(btn => {
         const action = btn.dataset.action
         const handler = () => {
@@ -268,14 +274,13 @@
             this.start()
             return
           }
-          if (this.paused && action !== 'pause') return
+          if (this.paused) return
           switch (action) {
             case 'left': this.move(-1, 0); break
             case 'right': this.move(1, 0); break
             case 'down': this.softDrop(); break
             case 'rotate': this.rotate(); break
             case 'harddrop': this.hardDrop(); break
-            case 'pause': this.togglePause(); break
           }
         }
         btn.addEventListener('click', handler)
