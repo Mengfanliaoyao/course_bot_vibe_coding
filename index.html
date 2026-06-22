@@ -11,13 +11,39 @@
   <main class="container">
     <h1 class="game-title">TETRIS</h1>
     <div class="game-wrapper">
-      <div class="board-container">
-        <canvas id="gameCanvas"></canvas>
-        <div id="overlay" class="overlay">
-          <div class="overlay-content">
-            <p id="overlayMessage" class="overlay-message">Press Enter to Start</p>
-            <p id="overlaySub" class="overlay-sub">Use arrow keys to play</p>
+      <div class="game-col">
+        <div class="top-bar">
+          <button id="muteBtn" class="icon-btn">🔊</button>
+          <div class="top-group">
+            <label class="top-label">Difficulty:
+              <select id="difficultySelect" class="top-select">
+                <option value="normal">Normal</option>
+                <option value="hard">Hard</option>
+              </select>
+            </label>
           </div>
+          <div class="top-group top-hs">
+            <span class="top-label">High:</span>
+            <strong id="highScoreDisplay">0</strong>
+          </div>
+        </div>
+        <div class="board-container">
+          <canvas id="gameCanvas"></canvas>
+          <div id="overlay" class="overlay">
+            <div class="overlay-content">
+              <p id="overlayMessage" class="overlay-message">Press Enter to Start</p>
+              <p id="overlaySub" class="overlay-sub">Use arrow keys to play</p>
+            </div>
+          </div>
+        </div>
+        <div class="ctrl-row" id="ctrlRow">
+          <button class="ctrl-btn" data-action="left">◀</button>
+          <button class="ctrl-btn" data-action="down">▼</button>
+          <button class="ctrl-btn" data-action="right">▶</button>
+          <button class="ctrl-btn" data-action="rotate">↻</button>
+          <button class="ctrl-btn ctrl-spacer">|</button>
+          <button class="ctrl-btn" data-action="harddrop">⤓</button>
+          <button class="ctrl-btn" data-action="pause">⏸</button>
         </div>
       </div>
       <aside class="side-panel">
@@ -30,39 +56,12 @@
           <p id="scoreDisplay" class="stat-value">0</p>
         </div>
         <div class="panel-section">
-          <h3>High Score</h3>
-          <p id="highScoreDisplay" class="stat-value stat-small">0</p>
-        </div>
-        <div class="panel-section">
           <h3>Lines</h3>
           <p id="linesDisplay" class="stat-value">0</p>
         </div>
         <div class="panel-section">
           <h3>Level</h3>
           <p id="levelDisplay" class="stat-value">1</p>
-        </div>
-        <div class="panel-section">
-          <h3>Difficulty</h3>
-          <select id="difficultySelect" class="diff-select">
-            <option value="normal">Normal</option>
-            <option value="hard">Hard</option>
-          </select>
-        </div>
-        <div class="panel-section">
-          <h3>Sound</h3>
-          <button id="muteBtn" class="mute-btn">Mute: Off</button>
-        </div>
-        <div class="panel-section controls-info">
-          <h3>Controls</h3>
-          <table>
-            <tr><td>← →</td><td>Move</td></tr>
-            <tr><td>↑</td><td>Rotate</td></tr>
-            <tr><td>↓</td><td>Soft drop</td></tr>
-            <tr><td>Space</td><td>Hard drop</td></tr>
-            <tr><td>P</td><td>Pause</td></tr>
-            <tr><td>M</td><td>Mute</td></tr>
-            <tr><td>Enter</td><td>Start</td></tr>
-          </table>
         </div>
       </aside>
     </div>

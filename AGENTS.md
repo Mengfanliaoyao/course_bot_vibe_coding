@@ -61,15 +61,23 @@ course_bot_vibe_coding/
 - [x] High score per difficulty (localStorage)
 - [x] Difficulty & mute controls in side panel
 
+### Phase 4: Polish & Mobile Controls (Done)
+- [x] Color palette per theme (dark: brighter, light: darker)
+- [x] Ghost piece uses neutral color per theme for universal visibility
+- [x] Layout restructured: top bar (mute/difficulty/high score), mobile buttons below board
+- [x] On-screen mobile controls (◀ ▼ ▶ ↻ ⤓ ⏸)
+- [x] Soft drop sound (ascending pitch with level & drop speed)
+- [x] Mobile-keyboard dual control support
+
 ### Controls
-| Key | Action |
-|-----|--------|
-| ← → | Move left/right |
-| ↑ | Rotate clockwise |
-| ↓ | Soft drop (faster fall) |
-| Space | Hard drop (instant) |
-| P | Pause/Resume |
-| M | Toggle mute |
+| Key / Button | Action |
+|--------------|--------|
+| ← → / ◀ ▶ | Move left/right |
+| ↑ / ↻ | Rotate clockwise |
+| ↓ / ▼ | Soft drop (faster fall) |
+| Space / ⤓ | Hard drop (instant) |
+| P / ⏸ | Pause/Resume |
+| M / 🔊 | Toggle mute |
 | Enter | Start / Restart |
 
 ### Scoring

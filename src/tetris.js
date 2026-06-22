@@ -3,21 +3,30 @@
   const ROWS = 20
   const CELL_SIZE = 30
 
+  const DARK_COLORS = {
+    I: '#00f0f0', J: '#4488ff', L: '#f0a000',
+    O: '#f0f000', S: '#00f000', T: '#a000f0', Z: '#f00000'
+  }
+  const LIGHT_COLORS = {
+    I: '#009999', J: '#3355cc', L: '#b87700',
+    O: '#999900', S: '#007700', T: '#7700aa', Z: '#bb0000'
+  }
+
   const SHAPES = {
-    I: { matrix: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], color: '#00f0f0' },
-    J: { matrix: [[1,0,0],[1,1,1],[0,0,0]], color: '#0000f0' },
-    L: { matrix: [[0,0,1],[1,1,1],[0,0,0]], color: '#f0a000' },
-    O: { matrix: [[1,1],[1,1]], color: '#f0f000' },
-    S: { matrix: [[0,1,1],[1,1,0],[0,0,0]], color: '#00f000' },
-    T: { matrix: [[0,1,0],[1,1,1],[0,0,0]], color: '#a000f0' },
-    Z: { matrix: [[1,1,0],[0,1,1],[0,0,0]], color: '#f00000' }
+    I: { matrix: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]] },
+    J: { matrix: [[1,0,0],[1,1,1],[0,0,0]] },
+    L: { matrix: [[0,0,1],[1,1,1],[0,0,0]] },
+    O: { matrix: [[1,1],[1,1]] },
+    S: { matrix: [[0,1,1],[1,1,0],[0,0,0]] },
+    T: { matrix: [[0,1,0],[1,1,1],[0,0,0]] },
+    Z: { matrix: [[1,1,0],[0,1,1],[0,0,0]] }
   }
   const PIECE_KEYS = Object.keys(SHAPES)
   const SCORE_TABLE = [0, 40, 100, 300, 1200]
 
   const DIFFICULTY = {
-    normal: { linesPerLevel: 10, baseInterval: 800, label: 'Normal' },
-    hard: { linesPerLevel: 4, baseInterval: 600, label: 'Hard' }
+    normal: { linesPerLevel: 10, baseInterval: 800 },
+    hard: { linesPerLevel: 4, baseInterval: 600 }
   }
 
   class SoundManager {
@@ -49,6 +58,23 @@
       gain.connect(ctx.destination)
       osc.start()
       osc.stop(ctx.currentTime + 0.08)
+    }
+
+    playSoftDrop (level) {
+      if (this.muted) return
+      const ctx = this.ensureCtx()
+      const baseFreq = 200 + level * 30
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(baseFreq, ctx.currentTime)
+      osc.frequency.exponentialRampToValueAtTime(baseFreq + 100, ctx.currentTime + 0.05)
+      gain.gain.setValueAtTime(0.12, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      osc.stop(ctx.currentTime + 0.05)
     }
 
     playClear (lines) {
@@ -159,10 +185,15 @@
 
       this.touchStartX = 0
       this.touchStartY = 0
+      this.softDownActive = false
 
       this.isDark = true
       this.gridColor = '#222'
       this.canvasBg = '#000'
+      this.ghostFillAlpha = 0.15
+      this.ghostStrokeAlpha = 0.4
+      this.ghostColor = '#fff'
+      this.colors = DARK_COLORS
 
       this.detectTheme()
       this.loadHighScore()
@@ -176,6 +207,10 @@
         this.isDark = mq.matches
         this.gridColor = this.isDark ? '#222' : '#ddd'
         this.canvasBg = this.isDark ? '#000' : '#fafafa'
+        this.ghostColor = this.isDark ? '#fff' : '#333'
+        this.ghostFillAlpha = this.isDark ? 0.15 : 0.12
+        this.ghostStrokeAlpha = this.isDark ? 0.4 : 0.3
+        this.colors = this.isDark ? DARK_COLORS : LIGHT_COLORS
         this.canvas.style.background = this.canvasBg
         this.nextCanvas.style.background = this.canvasBg
       }
@@ -189,8 +224,7 @@
     }
 
     getHighScoreKey () {
-      const diff = this.difficultySelect.value
-      return 'tetris_hs_' + diff
+      return 'tetris_hs_' + this.difficultySelect.value
     }
 
     saveHighScore () {
@@ -210,18 +244,45 @@
 
     bindEvents () {
       document.addEventListener('keydown', (e) => this.handleKeyDown(e))
+      document.addEventListener('keyup', (e) => this.handleKeyUp(e))
       this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: true })
       this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: true })
       this.canvas.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: true })
+
       this.difficultySelect.addEventListener('change', () => {
         this.updateHighScoreDisplay()
       })
+
       this.muteBtn.addEventListener('click', () => {
         const muted = this.sound.toggleMute()
-        this.muteBtn.textContent = 'Mute: ' + (muted ? 'On' : 'Off')
+        this.muteBtn.textContent = muted ? '🔇' : '🔊'
         if (!muted && this.started && !this.gameOver && !this.paused) {
           this.sound.startBGM(this.level)
         }
+      })
+
+      document.querySelectorAll('.ctrl-btn[data-action]').forEach(btn => {
+        const action = btn.dataset.action
+        const handler = () => {
+          if (!this.started || this.gameOver) {
+            this.start()
+            return
+          }
+          if (this.paused && action !== 'pause') return
+          switch (action) {
+            case 'left': this.move(-1, 0); break
+            case 'right': this.move(1, 0); break
+            case 'down': this.softDrop(); break
+            case 'rotate': this.rotate(); break
+            case 'harddrop': this.hardDrop(); break
+            case 'pause': this.togglePause(); break
+          }
+        }
+        btn.addEventListener('click', handler)
+        btn.addEventListener('touchstart', (e) => {
+          e.preventDefault()
+          handler()
+        }, { passive: false })
       })
     }
 
@@ -249,12 +310,30 @@
       switch (e.key) {
         case 'ArrowLeft': this.move(-1, 0); break
         case 'ArrowRight': this.move(1, 0); break
-        case 'ArrowDown': this.move(0, 1); break
+        case 'ArrowDown':
+          this.softDownActive = true
+          this.softDrop()
+          break
         case 'ArrowUp': this.rotate(); break
         case ' ': this.hardDrop(); break
         default: return
       }
       e.preventDefault()
+    }
+
+    handleKeyUp (e) {
+      if (e.key === 'ArrowDown') {
+        this.softDownActive = false
+      }
+    }
+
+    softDrop () {
+      if (this.isValidMove(this.current.matrix, this.current.x, this.current.y + 1)) {
+        this.current.y++
+        this.sound.playSoftDrop(this.level)
+      } else {
+        this.lockPiece()
+      }
     }
 
     handleTouchStart (e) {
@@ -302,6 +381,7 @@
       this.started = true
       this.dropCounter = 0
       this.lastTime = 0
+      this.softDownActive = false
       this.next = this.randomPiece()
       this.spawnPiece()
       this.updateUI()
@@ -325,10 +405,9 @@
 
     randomPiece () {
       const key = PIECE_KEYS[Math.floor(Math.random() * PIECE_KEYS.length)]
-      const shape = SHAPES[key]
       return {
-        matrix: shape.matrix.map(row => [...row]),
-        color: shape.color,
+        matrix: SHAPES[key].matrix.map(row => [...row]),
+        color: this.colors[key],
         key: key
       }
     }
@@ -497,15 +576,17 @@
         const ghostY = this.getGhostY()
         if (ghostY !== this.current.y) {
           ctx.save()
-          ctx.globalAlpha = 0.25
-          this.drawMatrix(ctx, this.current.matrix, this.current.x, ghostY, this.current.color)
+          ctx.globalAlpha = this.ghostFillAlpha
+          ctx.fillStyle = this.ghostColor
+          this.drawMatrix(ctx, this.current.matrix, this.current.x, ghostY, this.ghostColor)
           ctx.restore()
 
           ctx.save()
-          ctx.strokeStyle = this.current.color
+          ctx.strokeStyle = this.ghostColor
+          ctx.globalAlpha = this.ghostStrokeAlpha
           ctx.lineWidth = 1.5
           ctx.setLineDash([3, 3])
-          this.drawMatrixStroke(ctx, this.current.matrix, this.current.x, ghostY, this.current.color)
+          this.drawMatrixStroke(ctx, this.current.matrix, this.current.x, ghostY)
           ctx.restore()
         }
 
@@ -544,7 +625,7 @@
       }
     }
 
-    drawMatrixStroke (ctx, matrix, offsetX, offsetY, color) {
+    drawMatrixStroke (ctx, matrix, offsetX, offsetY) {
       for (let y = 0; y < matrix.length; y++) {
         for (let x = 0; x < matrix[y].length; x++) {
           if (matrix[y][x]) {
