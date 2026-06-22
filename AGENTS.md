@@ -45,6 +45,22 @@ course_bot_vibe_coding/
   - [x] Touch/mobile support (swipe & tap)
   - [x] Responsive canvas sizing
 
+### Phase 3: Visual, Audio & Difficulty (Done)
+- [x] Ghost piece visibility improvement (dashed outline + translucent fill)
+- [x] System dark/light theme auto-detection & Canvas adaptation
+- [x] Sound effects via Web Audio API (no external files):
+  - [x] Block placement sound (triangle, 150Hz)
+  - [x] Line clear sounds (sine, ascending pitch)
+  - [x] Tetris (4-line) special sound
+  - [x] Game over sound (descending sawtooth)
+  - [x] BGM with level-proportional tempo
+  - [x] Mute toggle (M key)
+- [x] Normal / Hard difficulty modes
+  - [x] Normal: level up every 10 lines, base interval 800ms
+  - [x] Hard: level up every 4 lines, base interval 600ms
+- [x] High score per difficulty (localStorage)
+- [x] Difficulty & mute controls in side panel
+
 ### Controls
 | Key | Action |
 |-----|--------|
@@ -53,6 +69,7 @@ course_bot_vibe_coding/
 | ↓ | Soft drop (faster fall) |
 | Space | Hard drop (instant) |
 | P | Pause/Resume |
+| M | Toggle mute |
 | Enter | Start / Restart |
 
 ### Scoring
@@ -63,4 +80,4 @@ course_bot_vibe_coding/
 | 3 lines (Triple) | 300 × level |
 | 4 lines (Tetris) | 1200 × level |
 
-Level increases every 10 lines cleared. Drop speed increases with level.
+Level increases every 10 lines (Normal) or 4 lines (Hard). Drop speed increases with level.

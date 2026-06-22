@@ -13,10 +13,113 @@
     Z: { matrix: [[1,1,0],[0,1,1],[0,0,0]], color: '#f00000' }
   }
   const PIECE_KEYS = Object.keys(SHAPES)
-
   const SCORE_TABLE = [0, 40, 100, 300, 1200]
-  const LINES_PER_LEVEL = 10
-  const BASE_INTERVAL = 800
+
+  const DIFFICULTY = {
+    normal: { linesPerLevel: 10, baseInterval: 800, label: 'Normal' },
+    hard: { linesPerLevel: 4, baseInterval: 600, label: 'Hard' }
+  }
+
+  class SoundManager {
+    constructor () {
+      this.ctx = null
+      this.muted = false
+    }
+
+    ensureCtx () {
+      if (!this.ctx) {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)()
+      }
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume()
+      }
+      return this.ctx
+    }
+
+    playPlace () {
+      if (this.muted) return
+      const ctx = this.ensureCtx()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(150, ctx.currentTime)
+      gain.gain.setValueAtTime(0.3, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      osc.stop(ctx.currentTime + 0.08)
+    }
+
+    playClear (lines) {
+      if (this.muted) return
+      const ctx = this.ensureCtx()
+      const isTetris = lines >= 4
+      const endFreq = isTetris ? 800 : 600
+      const duration = isTetris ? 0.4 : 0.2
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(400, ctx.currentTime)
+      osc.frequency.exponentialRampToValueAtTime(endFreq, ctx.currentTime + duration)
+      gain.gain.setValueAtTime(0.25, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      osc.stop(ctx.currentTime + duration)
+    }
+
+    playGameOver () {
+      if (this.muted) return
+      const ctx = this.ensureCtx()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sawtooth'
+      osc.frequency.setValueAtTime(300, ctx.currentTime)
+      osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.5)
+      gain.gain.setValueAtTime(0.2, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      osc.stop(ctx.currentTime + 0.5)
+    }
+
+    startBGM (level) {
+      this.stopBGM()
+      if (this.muted) return
+      const bpm = 60 + level * 15
+      const interval = 60000 / bpm
+      this.bgmTimer = setInterval(() => {
+        if (this.muted) return
+        const ctx = this.ensureCtx()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'square'
+        osc.frequency.setValueAtTime(440, ctx.currentTime)
+        gain.gain.setValueAtTime(0.05, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.06)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start()
+        osc.stop(ctx.currentTime + 0.06)
+      }, interval)
+    }
+
+    stopBGM () {
+      if (this.bgmTimer) {
+        clearInterval(this.bgmTimer)
+        this.bgmTimer = null
+      }
+    }
+
+    toggleMute () {
+      this.muted = !this.muted
+      if (this.muted) this.stopBGM()
+      return this.muted
+    }
+  }
 
   class TetrisGame {
     constructor () {
@@ -28,15 +131,19 @@
       this.scoreDisplay = document.getElementById('scoreDisplay')
       this.linesDisplay = document.getElementById('linesDisplay')
       this.levelDisplay = document.getElementById('levelDisplay')
+      this.highScoreDisplay = document.getElementById('highScoreDisplay')
       this.overlay = document.getElementById('overlay')
       this.overlayMessage = document.getElementById('overlayMessage')
       this.overlaySub = document.getElementById('overlaySub')
+      this.difficultySelect = document.getElementById('difficultySelect')
+      this.muteBtn = document.getElementById('muteBtn')
 
       this.canvas.width = COLS * CELL_SIZE
       this.canvas.height = ROWS * CELL_SIZE
       this.nextCanvas.width = 4 * CELL_SIZE
       this.nextCanvas.height = 4 * CELL_SIZE
 
+      this.sound = new SoundManager()
       this.board = []
       this.score = 0
       this.lines = 0
@@ -46,7 +153,6 @@
       this.gameOver = false
       this.paused = false
       this.started = false
-      this.dropTimer = null
       this.rafId = null
       this.lastTime = 0
       this.dropCounter = 0
@@ -54,7 +160,52 @@
       this.touchStartX = 0
       this.touchStartY = 0
 
+      this.isDark = true
+      this.gridColor = '#222'
+      this.canvasBg = '#000'
+
+      this.detectTheme()
+      this.loadHighScore()
       this.bindEvents()
+      this.draw()
+    }
+
+    detectTheme () {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)')
+      const update = () => {
+        this.isDark = mq.matches
+        this.gridColor = this.isDark ? '#222' : '#ddd'
+        this.canvasBg = this.isDark ? '#000' : '#fafafa'
+        this.canvas.style.background = this.canvasBg
+        this.nextCanvas.style.background = this.canvasBg
+      }
+      mq.addEventListener('change', update)
+      update()
+    }
+
+    loadHighScore () {
+      this.highScore = 0
+      this.updateHighScoreDisplay()
+    }
+
+    getHighScoreKey () {
+      const diff = this.difficultySelect.value
+      return 'tetris_hs_' + diff
+    }
+
+    saveHighScore () {
+      const key = this.getHighScoreKey()
+      const prev = parseInt(localStorage.getItem(key) || '0', 10)
+      if (this.score > prev) {
+        localStorage.setItem(key, String(this.score))
+        this.highScore = this.score
+      }
+    }
+
+    updateHighScoreDisplay () {
+      const key = this.getHighScoreKey()
+      this.highScore = parseInt(localStorage.getItem(key) || '0', 10)
+      this.highScoreDisplay.textContent = this.highScore
     }
 
     bindEvents () {
@@ -62,6 +213,16 @@
       this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: true })
       this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: true })
       this.canvas.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: true })
+      this.difficultySelect.addEventListener('change', () => {
+        this.updateHighScoreDisplay()
+      })
+      this.muteBtn.addEventListener('click', () => {
+        const muted = this.sound.toggleMute()
+        this.muteBtn.textContent = 'Mute: ' + (muted ? 'On' : 'Off')
+        if (!muted && this.started && !this.gameOver && !this.paused) {
+          this.sound.startBGM(this.level)
+        }
+      })
     }
 
     handleKeyDown (e) {
@@ -75,6 +236,11 @@
       if (!this.started || this.gameOver) return
       if (e.key === 'p' || e.key === 'P') {
         this.togglePause()
+        e.preventDefault()
+        return
+      }
+      if (e.key === 'm' || e.key === 'M') {
+        this.muteBtn.click()
         e.preventDefault()
         return
       }
@@ -139,9 +305,22 @@
       this.next = this.randomPiece()
       this.spawnPiece()
       this.updateUI()
+      this.updateHighScoreDisplay()
       this.overlay.classList.add('hidden')
+      this.sound.stopBGM()
+      this.sound.startBGM(this.level)
       if (this.rafId) cancelAnimationFrame(this.rafId)
       this.rafId = requestAnimationFrame((t) => this.gameLoop(t))
+    }
+
+    getLinesPerLevel () {
+      const diff = this.difficultySelect.value
+      return DIFFICULTY[diff] ? DIFFICULTY[diff].linesPerLevel : 10
+    }
+
+    getBaseInterval () {
+      const diff = this.difficultySelect.value
+      return DIFFICULTY[diff] ? DIFFICULTY[diff].baseInterval : 800
     }
 
     randomPiece () {
@@ -230,6 +409,7 @@
           }
         }
       }
+      this.sound.playPlace()
       this.clearLines()
       if (!this.gameOver) this.spawnPiece()
     }
@@ -247,8 +427,11 @@
       if (cleared > 0) {
         this.lines += cleared
         this.score += (SCORE_TABLE[cleared] || 0) * this.level
-        this.level = Math.floor(this.lines / LINES_PER_LEVEL) + 1
+        this.level = Math.floor(this.lines / this.getLinesPerLevel()) + 1
+        this.sound.playClear(cleared)
         this.updateUI()
+        this.sound.stopBGM()
+        this.sound.startBGM(this.level)
       }
     }
 
@@ -258,14 +441,19 @@
         this.overlayMessage.textContent = 'PAUSED'
         this.overlaySub.textContent = 'Press P to resume'
         this.overlay.classList.remove('hidden')
+        this.sound.stopBGM()
       } else {
         this.overlay.classList.add('hidden')
+        this.sound.startBGM(this.level)
       }
     }
 
     showGameOver () {
+      this.saveHighScore()
+      this.sound.playGameOver()
+      this.sound.stopBGM()
       this.overlayMessage.textContent = 'GAME OVER'
-      this.overlaySub.textContent = `Score: ${this.score}  Press Enter to restart`
+      this.overlaySub.textContent = 'Score: ' + this.score + '  Press Enter to restart'
       this.overlay.classList.remove('hidden')
     }
 
@@ -284,7 +472,7 @@
       const delta = time - this.lastTime
       this.lastTime = time
       this.dropCounter += delta
-      const interval = Math.max(100, BASE_INTERVAL - (this.level - 1) * 60)
+      const interval = Math.max(80, this.getBaseInterval() - (this.level - 1) * 60)
       if (this.dropCounter >= interval) {
         this.dropCounter = 0
         this.move(0, 1)
@@ -308,15 +496,23 @@
       if (this.current && !this.gameOver && this.started) {
         const ghostY = this.getGhostY()
         if (ghostY !== this.current.y) {
-          ctx.globalAlpha = 0.2
+          ctx.save()
+          ctx.globalAlpha = 0.25
           this.drawMatrix(ctx, this.current.matrix, this.current.x, ghostY, this.current.color)
-          ctx.globalAlpha = 1
+          ctx.restore()
+
+          ctx.save()
+          ctx.strokeStyle = this.current.color
+          ctx.lineWidth = 1.5
+          ctx.setLineDash([3, 3])
+          this.drawMatrixStroke(ctx, this.current.matrix, this.current.x, ghostY, this.current.color)
+          ctx.restore()
         }
 
         this.drawMatrix(ctx, this.current.matrix, this.current.x, this.current.y, this.current.color)
       }
 
-      ctx.strokeStyle = '#222'
+      ctx.strokeStyle = this.gridColor
       ctx.lineWidth = 0.5
       for (let row = 0; row <= ROWS; row++) {
         ctx.beginPath()
@@ -342,6 +538,21 @@
               (offsetY + y) * CELL_SIZE,
               CELL_SIZE - 1,
               CELL_SIZE - 1
+            )
+          }
+        }
+      }
+    }
+
+    drawMatrixStroke (ctx, matrix, offsetX, offsetY, color) {
+      for (let y = 0; y < matrix.length; y++) {
+        for (let x = 0; x < matrix[y].length; x++) {
+          if (matrix[y][x]) {
+            ctx.strokeRect(
+              (offsetX + x) * CELL_SIZE + 0.5,
+              (offsetY + y) * CELL_SIZE + 0.5,
+              CELL_SIZE - 2,
+              CELL_SIZE - 2
             )
           }
         }
@@ -374,5 +585,4 @@
   }
 
   const game = new TetrisGame()
-  game.draw()
 })()

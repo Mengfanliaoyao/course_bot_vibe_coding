@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -30,12 +30,27 @@
           <p id="scoreDisplay" class="stat-value">0</p>
         </div>
         <div class="panel-section">
+          <h3>High Score</h3>
+          <p id="highScoreDisplay" class="stat-value stat-small">0</p>
+        </div>
+        <div class="panel-section">
           <h3>Lines</h3>
           <p id="linesDisplay" class="stat-value">0</p>
         </div>
         <div class="panel-section">
           <h3>Level</h3>
           <p id="levelDisplay" class="stat-value">1</p>
+        </div>
+        <div class="panel-section">
+          <h3>Difficulty</h3>
+          <select id="difficultySelect" class="diff-select">
+            <option value="normal">Normal</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+        <div class="panel-section">
+          <h3>Sound</h3>
+          <button id="muteBtn" class="mute-btn">Mute: Off</button>
         </div>
         <div class="panel-section controls-info">
           <h3>Controls</h3>
@@ -45,6 +60,7 @@
             <tr><td>↓</td><td>Soft drop</td></tr>
             <tr><td>Space</td><td>Hard drop</td></tr>
             <tr><td>P</td><td>Pause</td></tr>
+            <tr><td>M</td><td>Mute</td></tr>
             <tr><td>Enter</td><td>Start</td></tr>
           </table>
         </div>
