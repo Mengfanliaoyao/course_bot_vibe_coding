@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tetris</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+  <main class="container">
+    <h1 class="game-title">TETRIS</h1>
+    <div class="game-wrapper">
+      <div class="board-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="overlay" class="overlay">
+          <div class="overlay-content">
+            <p id="overlayMessage" class="overlay-message">Press Enter to Start</p>
+            <p id="overlaySub" class="overlay-sub">Use arrow keys to play</p>
+          </div>
+        </div>
+      </div>
+      <aside class="side-panel">
+        <div class="panel-section">
+          <h3>Next</h3>
+          <canvas id="nextCanvas"></canvas>
+        </div>
+        <div class="panel-section">
+          <h3>Score</h3>
+          <p id="scoreDisplay" class="stat-value">0</p>
+        </div>
+        <div class="panel-section">
+          <h3>Lines</h3>
+          <p id="linesDisplay" class="stat-value">0</p>
+        </div>
+        <div class="panel-section">
+          <h3>Level</h3>
+          <p id="levelDisplay" class="stat-value">1</p>
+        </div>
+        <div class="panel-section controls-info">
+          <h3>Controls</h3>
+          <table>
+            <tr><td>← →</td><td>Move</td></tr>
+            <tr><td>↑</td><td>Rotate</td></tr>
+            <tr><td>↓</td><td>Soft drop</td></tr>
+            <tr><td>Space</td><td>Hard drop</td></tr>
+            <tr><td>P</td><td>Pause</td></tr>
+            <tr><td>Enter</td><td>Start</td></tr>
+          </table>
+        </div>
+      </aside>
+    </div>
+  </main>
+  <script src="src/tetris.js"></script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+:root {
+  --game-bg: #111;
+  --board-border: #444;
+  --panel-bg: #1a1a2e;
+  --text-accent: #e94560;
+}
+
+body {
+  background: var(--game-bg);
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.game-title {
+  text-align: center;
+  font-size: 2.5rem;
+  letter-spacing: 0.5em;
+  color: var(--text-accent);
+  margin: 0.5rem 0;
+  text-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+}
+
+.game-wrapper {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.board-container {
+  position: relative;
+  flex-shrink: 0;
+}
+
+#gameCanvas {
+  display: block;
+  border: 2px solid var(--board-border);
+  border-radius: 4px;
+  background: #000;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: opacity 0.3s;
+}
+
+.overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.overlay-content {
+  text-align: center;
+}
+
+.overlay-message {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.overlay-sub {
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-width: 140px;
+  background: var(--panel-bg);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--board-border);
+}
+
+.panel-section h3 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #888;
+  margin: 0 0 0.3rem;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.2rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+#nextCanvas {
+  display: block;
+  background: #000;
+  border: 1px solid #333;
+  border-radius: 4px;
+  margin: 0 auto;
+}
+
+.controls-info table {
+  width: 100%;
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+.controls-info td {
+  padding: 0.1rem 0.2rem;
+  color: #aaa;
+  border: none;
+}
+
+.controls-info td:first-child {
+  color: var(--text-accent);
+  font-weight: bold;
+  width: 60px;
+}
+
+@media (max-width: 520px) {
+  .game-title {
+    font-size: 1.6rem;
+  }
+  .game-wrapper {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  .side-panel {
+    flex-direction: row;
+    flex-wrap: wrap;
+    min-width: unset;
+    width: 100%;
+    max-width: 300px;
+    justify-content: center;
+  }
+  .panel-section {
+    text-align: center;
+  }
+  .controls-info {
+    display: none;
+  }
+}
