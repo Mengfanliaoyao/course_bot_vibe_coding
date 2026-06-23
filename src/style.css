@@ -257,6 +257,21 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.stat-popup {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--text-accent);
+  height: 1.5em;
+  line-height: 1.5em;
+  opacity: 0;
+  transition: opacity 0.3s;
+  text-align: center;
+}
+
+.stat-popup.visible {
+  opacity: 1;
+}
+
 #nextCanvas {
   display: block;
   background: var(--canvas-bg);

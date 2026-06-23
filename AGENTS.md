@@ -61,6 +61,15 @@ course_bot_vibe_coding/
 - [x] High score per difficulty (localStorage)
 - [x] Difficulty & mute controls in side panel
 
+### Phase 5: Line Clear Effects & Side Panel Score Popup (Done)
+- [x] Glow outline on completed rows during clearing (golden pulse, duration scales with lines)
+- [x] Particle explosion from cleared blocks (more particles for more lines)
+- [x] Screen shake on row drop (intensity scales with lines)
+- [x] Side panel "+score" popup with 2s fade-out timer
+- [x] Pending score committed after 2s or immediately when replaced by new clear
+- [x] Input locked during clearing animation
+- [x] Pre-scored space reserved in side panel Score section
+
 ### Phase 4: Polish & Mobile Controls (Done)
 - [x] Color palette per theme (dark: brighter, light: darker)
 - [x] Ghost piece uses neutral color per theme for universal visibility

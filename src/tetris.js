@@ -188,6 +188,11 @@
       this.touchStartY = 0
       this.softDownActive = false
 
+      this.clearingAnim = null
+      this.pendingScore = 0
+      this.scorePopupTimer = null
+      this.scorePopupEl = document.getElementById('scorePopup')
+
       this.isDark = true
       this.gridColor = '#222'
       this.canvasBg = '#000'
@@ -274,7 +279,7 @@
             this.start()
             return
           }
-          if (this.paused) return
+          if (this.paused || this.clearingAnim) return
           switch (action) {
             case 'left': this.move(-1, 0); break
             case 'right': this.move(1, 0); break
@@ -300,6 +305,7 @@
         }
       }
       if (!this.started || this.gameOver) return
+      if (this.clearingAnim) return
       if (e.key === 'p' || e.key === 'P') {
         this.togglePause()
         e.preventDefault()
@@ -356,7 +362,7 @@
         this.start()
         return
       }
-      if (this.paused) return
+      if (this.paused || this.clearingAnim) return
 
       const dx = e.changedTouches[0].clientX - this.touchStartX
       const dy = e.changedTouches[0].clientY - this.touchStartY
@@ -387,6 +393,14 @@
       this.dropCounter = 0
       this.lastTime = 0
       this.softDownActive = false
+      this.clearingAnim = null
+      if (this.scorePopupTimer) {
+        clearTimeout(this.scorePopupTimer)
+        this.scorePopupTimer = null
+      }
+      this.pendingScore = 0
+      this.scorePopupEl.classList.remove('visible')
+      this.scorePopupEl.textContent = ''
       this.next = this.randomPiece()
       this.spawnPiece()
       this.updateUI()
@@ -494,29 +508,148 @@
         }
       }
       this.sound.playPlace()
-      this.clearLines()
+      const hasAnim = this.startClearingAnim()
+      if (!hasAnim && !this.gameOver) this.spawnPiece()
+    }
+
+    startClearingAnim () {
+      const clearedRows = []
+      for (let row = ROWS - 1; row >= 0; row--) {
+        if (this.board[row].every(cell => cell !== 0)) {
+          clearedRows.push(row)
+        }
+      }
+      if (clearedRows.length === 0) return false
+
+      const n = clearedRows.length
+      const pendingScore = (SCORE_TABLE[n] || 0) * this.level
+      this.sound.playClear(n)
+
+      const blockColors = []
+      for (const row of clearedRows) {
+        for (let col = 0; col < COLS; col++) {
+          if (this.board[row][col]) blockColors.push(this.board[row][col])
+        }
+      }
+
+      this.clearingAnim = {
+        rows: clearedRows,
+        n,
+        pendingScore,
+        phase: 'glow',
+        timer: 0,
+        glowDuration: 300 + n * 50,
+        explodeDuration: 200 + n * 50,
+        dropDuration: 150 + n * 30,
+        particles: [],
+        blockColors,
+        shakeIntensity: n * 1.5,
+        shakeTimer: 0,
+        exploded: false,
+        shifted: false
+      }
+      return true
+    }
+
+    updateClearingAnim (dt) {
+      const anim = this.clearingAnim
+      anim.timer += dt
+
+      if (anim.phase === 'glow') {
+        if (anim.timer >= anim.glowDuration) {
+          anim.phase = 'explode'
+          anim.timer = 0
+        }
+        return
+      }
+
+      if (anim.phase === 'explode') {
+        if (!anim.exploded) {
+          for (const row of anim.rows) {
+            this.board.splice(row, 1)
+            this.board.unshift(Array(COLS).fill(0))
+          }
+          for (let i = 0; i < anim.n * 15; i++) {
+            const ci = Math.floor(Math.random() * anim.blockColors.length)
+            anim.particles.push({
+              x: Math.random() * this.canvas.width,
+              y: (anim.rows[0] + Math.random() * anim.n) * CELL_SIZE,
+              vx: (Math.random() - 0.5) * 8,
+              vy: (Math.random() - 0.5) * 8 - 3,
+              life: 1,
+              color: anim.blockColors[ci],
+              size: 3 + Math.random() * 3
+            })
+          }
+          anim.exploded = true
+        }
+
+        for (let i = anim.particles.length - 1; i >= 0; i--) {
+          const p = anim.particles[i]
+          p.x += p.vx
+          p.y += p.vy
+          p.vy += 0.25
+          p.life -= dt / anim.explodeDuration
+          if (p.life <= 0) anim.particles.splice(i, 1)
+        }
+
+        if (anim.timer >= anim.explodeDuration) {
+          anim.phase = 'drop'
+          anim.timer = 0
+          anim.shakeTimer = anim.dropDuration
+        }
+        return
+      }
+
+      if (anim.phase === 'drop') {
+        anim.shakeTimer = Math.max(0, anim.shakeTimer - dt)
+        if (anim.timer >= anim.dropDuration) {
+          this.onClearingComplete()
+        }
+        return
+      }
+    }
+
+    onClearingComplete () {
+      const n = this.clearingAnim.n
+      const pendingScore = this.clearingAnim.pendingScore
+
+      this.lines += n
+      this.level = Math.floor(this.lines / this.getLinesPerLevel()) + 1
+      this.updateUI()
+      this.sound.stopBGM()
+      this.sound.startBGM(this.level)
+
+      this.clearingAnim = null
+      this.showSidePopup(pendingScore)
+
       if (!this.gameOver) this.spawnPiece()
     }
 
-    clearLines () {
-      let cleared = 0
-      for (let row = ROWS - 1; row >= 0; row--) {
-        if (this.board[row].every(cell => cell !== 0)) {
-          this.board.splice(row, 1)
-          this.board.unshift(Array(COLS).fill(0))
-          cleared++
-          row++
-        }
+    showSidePopup (pts) {
+      if (this.scorePopupTimer) {
+        this.commitPendingScore()
       }
-      if (cleared > 0) {
-        this.lines += cleared
-        this.score += (SCORE_TABLE[cleared] || 0) * this.level
-        this.level = Math.floor(this.lines / this.getLinesPerLevel()) + 1
-        this.sound.playClear(cleared)
-        this.updateUI()
-        this.sound.stopBGM()
-        this.sound.startBGM(this.level)
+      this.pendingScore = pts
+      this.scorePopupEl.textContent = '+' + pts
+      this.scorePopupEl.classList.add('visible')
+      this.scorePopupTimer = setTimeout(() => {
+        this.commitPendingScore()
+      }, 2000)
+    }
+
+    commitPendingScore () {
+      if (this.scorePopupTimer) {
+        clearTimeout(this.scorePopupTimer)
+        this.scorePopupTimer = null
       }
+      this.score += this.pendingScore
+      this.pendingScore = 0
+      this.scorePopupEl.classList.remove('visible')
+      this.scorePopupEl.textContent = ''
+      this.updateUI()
+      this.saveHighScore()
+      this.updateHighScoreDisplay()
     }
 
     togglePause () {
@@ -533,6 +666,7 @@
     }
 
     showGameOver () {
+      if (this.pendingScore) this.commitPendingScore()
       this.saveHighScore()
       this.sound.playGameOver()
       this.sound.stopBGM()
@@ -555,6 +689,13 @@
       }
       const delta = time - this.lastTime
       this.lastTime = time
+
+      if (this.clearingAnim) {
+        this.updateClearingAnim(delta)
+        this.draw()
+        return
+      }
+
       this.dropCounter += delta
       const interval = Math.max(80, this.getBaseInterval() - (this.level - 1) * 60)
       if (this.dropCounter >= interval) {
@@ -566,7 +707,18 @@
 
     draw () {
       const { ctx, canvas } = this
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      const anim = this.clearingAnim
+
+      ctx.save()
+
+      if (anim && anim.shakeTimer > 0) {
+        const intensity = anim.shakeTimer / anim.dropDuration
+        const sx = (Math.random() - 0.5) * intensity * 6
+        const sy = (Math.random() - 0.5) * intensity * 6
+        ctx.translate(sx, sy)
+      }
+
+      ctx.clearRect(-10, -10, canvas.width + 20, canvas.height + 20)
 
       for (let row = 0; row < ROWS; row++) {
         for (let col = 0; col < COLS; col++) {
@@ -574,6 +726,29 @@
             ctx.fillStyle = this.board[row][col]
             ctx.fillRect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE - 1, CELL_SIZE - 1)
           }
+        }
+      }
+
+      if (anim && anim.phase === 'glow') {
+        const pulse = 0.6 + 0.4 * Math.sin(anim.timer * 0.01)
+        for (const row of anim.rows) {
+          ctx.save()
+          ctx.strokeStyle = '#FFD700'
+          ctx.lineWidth = 3 * pulse
+          ctx.shadowColor = '#FFD700'
+          ctx.shadowBlur = 15 * pulse
+          ctx.strokeRect(1, row * CELL_SIZE + 1, canvas.width - 3, CELL_SIZE - 2)
+          ctx.restore()
+        }
+      }
+
+      if (anim && anim.particles.length > 0) {
+        for (const p of anim.particles) {
+          ctx.save()
+          ctx.globalAlpha = Math.max(0, p.life)
+          ctx.fillStyle = p.color
+          ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size)
+          ctx.restore()
         }
       }
 
@@ -612,6 +787,8 @@
         ctx.lineTo(col * CELL_SIZE, canvas.height)
         ctx.stroke()
       }
+
+      ctx.restore()
     }
 
     drawMatrix (ctx, matrix, offsetX, offsetY, color) {
