@@ -532,15 +532,17 @@
         }
       }
 
+      const speedMul = Math.max(0.3, 1 - (this.level - 1) * 0.05)
+
       this.clearingAnim = {
         rows: clearedRows,
         n,
         pendingScore,
         phase: 'glow',
         timer: 0,
-        glowDuration: 300 + n * 50,
-        explodeDuration: 200 + n * 50,
-        dropDuration: 150 + n * 30,
+        glowDuration: (300 + n * 50) * speedMul,
+        explodeDuration: (200 + n * 50) * speedMul,
+        dropDuration: (150 + n * 30) * speedMul,
         particles: [],
         blockColors,
         shakeIntensity: n * 1.5,
@@ -565,8 +567,11 @@
 
       if (anim.phase === 'explode') {
         if (!anim.exploded) {
-          for (const row of anim.rows) {
+          const sorted = [...anim.rows].sort((a, b) => b - a)
+          for (const row of sorted) {
             this.board.splice(row, 1)
+          }
+          for (let i = 0; i < anim.n; i++) {
             this.board.unshift(Array(COLS).fill(0))
           }
           for (let i = 0; i < anim.n * 15; i++) {
