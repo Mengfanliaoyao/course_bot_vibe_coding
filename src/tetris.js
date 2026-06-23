@@ -757,7 +757,7 @@
         }
       }
 
-      if (this.current && !this.gameOver && this.started) {
+      if (this.current && !this.gameOver && this.started && !this.clearingAnim) {
         const ghostY = this.getGhostY()
         if (ghostY !== this.current.y) {
           ctx.save()
